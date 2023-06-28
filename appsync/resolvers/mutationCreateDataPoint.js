@@ -2,9 +2,17 @@ import { util } from '@aws-appsync/utils';
 
 export function request(ctx) {
     const { input: values } = ctx.arguments;
+    let owner = ctx.identity.claims["username"]
+    if (owner === null){
+        owner = ctx.identity.claims["cognito:username"]
+    }
+    values.owner = owner
+    if (values.createdAt === null ){
+        values.createdAt = util.time.nowISO8601()
+    }
     const key = {
-        name: values.name,
-        createdAt: util.time.nowISO8601()
+        PK: owner+'#'+values.name,
+        SK: values.createdAt
     };
     
     if (values.value === null) {
@@ -12,16 +20,16 @@ export function request(ctx) {
     }
     
     const condition = {
-        name: { attributeExists: false },
-        createdAt: { attributeExists: false }
+        PK: { attributeExists: false },
+        SK: { attributeExists: false }
     };
     
     return {
         operation: 'PutItem',
         key: util.dynamodb.toMapValues(key),
         attributeValues: util.dynamodb.toMapValues(values),
-        condition: getCondition(condition)
-      };
+        condition:getCondition(condition)
+    };
 }
 
 // Source: https://github.com/aws-samples/aws-appsync-resolver-samples/blob/main/templates/functions/dynamodb/createItem.js

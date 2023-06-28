@@ -1,6 +1,10 @@
 import { util } from '@aws-appsync/utils';
 
 export function request(ctx) {
+    let owner = ctx.identity.claims["username"]
+    if (owner === null){
+      owner = ctx.identity.claims["cognito:username"]
+    }
     let scanIndexFwd = true
     if(ctx.args.sortDirection && ctx.args.sortDirection == "DESC"){
         scanIndexFwd = false
@@ -9,12 +13,12 @@ export function request(ctx) {
     if(ctx.args.filter){
       filter = JSON.parse(util.transform.toDynamoDBFilterExpression(ctx.args.filter)) 
     }
-    const expression = getExpression(ctx.args.createdAt, ctx.args.name)
+    const expression = getExpression(ctx.args.createdAt, ctx.args.name, owner)
     return {
         operation: 'Query',
         query: {
           expression: expression?.comparison_str,
-          expressionNames: { "#name": "name"},
+          expressionNames: expression?.expressionNames,
           expressionValues: expression?.expressionValues  },
         limit: ctx.args.limit,
         filter: filter,
@@ -23,44 +27,53 @@ export function request(ctx) {
     };
 }
 
-function getExpression(createdAt, name){
-  let comparison_str = '#name = :name'
+function getExpression(createdAt, name, owner){
+  let comparison_str = '#PK = :PK'
+  let expressionNames = { "#PK": "PK"}
   let expressionValues = {
-    ':name': util.dynamodb.toDynamoDB(name),
+    ':PK': { "S": owner+"#"+name },
   }
+
   if(createdAt){       
     if(createdAt.beginsWith){
-      comparison_str += ' and begins_with(createdAt, :date)'
-      expressionValues[':date'] = util.dynamodb.toDynamoDB(createdAt.beginsWith)       
+      comparison_str += ' and begins_with(#sortKey, :sortKey)'
+      expressionNames["#sortKey"] = "SK"
+      expressionValues[':sortKey'] = {"S": createdAt.beginsWith}
       
     }
     else if(createdAt.eq){
-      comparison_str += ' and createdAt = :date'
-      expressionValues[':date'] = util.dynamodb.toDynamoDB(createdAt.eq)
+      comparison_str += ' and #sortKey = :sortKey'
+      expressionNames["#sortKey"] = "SK"
+      expressionValues[':sortKey'] = {"S": createdAt.eq}
     }
     else if(createdAt.lt){
-      comparison_str += ' and createdAt < :date'
-      expressionValues[':date'] = util.dynamodb.toDynamoDB(createdAt.lt)
+      comparison_str += ' and #sortKey < :sortKey'
+      expressionNames["#sortKey"] = "SK"
+      expressionValues[':sortKey'] = {"S": createdAt.lt}
     }
     else if(createdAt.le){
-      comparison_str += ' and createdAt <= :date'
-      expressionValues[':date'] = util.dynamodb.toDynamoDB(createdAt.le)
+      comparison_str += ' and #sortKey <= :sortKey'
+      expressionNames["#sortKey"] = "SK"
+      expressionValues[':sortKey'] = {"S": createdAt.le}
     }
     else if(createdAt.gt){
-      comparison_str += ' and createdAt > :date'
-      expressionValues[':date'] = util.dynamodb.toDynamoDB(createdAt.gt)
+      comparison_str += ' and #sortKey > :sortKey'
+      expressionNames["#sortKey"] = "SK"
+      expressionValues[':sortKey'] = {"S": createdAt.gt}
     }
     else if(createdAt.ge){
-      comparison_str += ' and createdAt >= :date'
-      expressionValues[':date'] = util.dynamodb.toDynamoDB(createdAt.ge)
+      comparison_str += ' and #sortKey >= :sortKey'
+      expressionNames["#sortKey"] = "SK"
+      expressionValues[':sortKey'] = {"S": createdAt.ge}
     }
     else if(createdAt.between){
-        comparison_str += ' and createdAt BETWEEN :start AND :end'
-        expressionValues[':start'] = util.dynamodb.toDynamoDB(createdAt.between[0])
-        expressionValues[':end'] = util.dynamodb.toDynamoDB(createdAt.between[1])         
+        comparison_str += ' and #sortKey BETWEEN :sortKey0 AND :sortKey1'
+        expressionNames["#sortKey"] = "SK"
+        expressionValues[':sortKey0'] = {"S": createdAt.between[0]}
+        expressionValues[':sortKey1'] = {"S": createdAt.between[1]}       
     }   
   }
-  return {comparison_str, expressionValues}
+  return {comparison_str, expressionValues, expressionNames}
 }
 
 export function response(ctx) {
