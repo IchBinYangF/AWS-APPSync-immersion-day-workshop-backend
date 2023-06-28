@@ -3,6 +3,7 @@
     "STACKREGION": "eu-central-1",
     "GraphQLAPIID": "mm5m4s23yrayvmsx7arjc6ptg4",
     "GraphQLAPIURL": "https://5dlfw3ksj5bmxggdis36ikvvhm.appsync-api.eu-central-1.amazonaws.com/graphql",
-    "GraphQLAPIKEY": "da2-zaczfx2zbnf2tbv5nshwipuj4m"
+    "USERPOOLSID": "eu-central-1_jdCRmOXLO",
+    "USERPOOLSWEBCLIENTID": "3rssputbj9slqk1jso9jjen28s"
   }
 }
