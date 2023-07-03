@@ -3,7 +3,6 @@ import { util } from '@aws-appsync/utils';
 export function request(ctx) {
     return {}
 }
-//allow users to only read/write their own data.
 // filter the returned items
 export function response(ctx) {
     let identityValue = ctx.identity.claims["username"]
